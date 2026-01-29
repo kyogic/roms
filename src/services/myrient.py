@@ -82,6 +82,58 @@ MYRIENT_SYSTEM_PATHS = {
     "3do": "Redump/3DO Interactive Multiplayer",
 }
 
+# Alternative/fallback collection paths for each system
+# These are tried if the primary path fails
+MYRIENT_ALTERNATIVE_PATHS = {
+    # Nintendo - some have headerless versions or different formats
+    "nes": [
+        "No-Intro/Nintendo - Nintendo Entertainment System (Headerless)",
+        "No-Intro/Nintendo - Family Computer Disk System",
+    ],
+    "snes": [
+        "No-Intro/Nintendo - Satellaview",
+        "No-Intro/Nintendo - Sufami Turbo",
+    ],
+    "n64": [
+        "No-Intro/Nintendo - Nintendo 64 (ByteSwapped)",
+        "No-Intro/Nintendo - Nintendo 64DD",
+    ],
+    "gcn": [
+        "Redump/Nintendo - GameCube",
+    ],
+    "nds": [
+        "No-Intro/Nintendo - Nintendo DS",
+        "No-Intro/Nintendo - Nintendo DSi (Decrypted)",
+    ],
+
+    # PlayStation - CHD versions available
+    "ps1": [
+        "Redump/Sony - PlayStation - Datfile",
+    ],
+    "ps2": [
+        "Redump/Sony - PlayStation 2 - Datfile",
+    ],
+
+    # Sega alternatives
+    "genesis": [
+        "No-Intro/Sega - Mega Drive - Genesis (Sega Channel)",
+    ],
+    "saturn": [
+        "Redump/Sega - Saturn - Datfile",
+    ],
+    "dreamcast": [
+        "Redump/Sega - Dreamcast - Datfile",
+    ],
+
+    # NEC alternatives
+    "tg16": [
+        "No-Intro/NEC - PC Engine SuperGrafx",
+    ],
+    "tgcd": [
+        "Redump/NEC - PC Engine CD - TurboGrafx-CD - Datfile",
+    ],
+}
+
 
 class MyrientClient:
     """Client for interacting with Myrient ROM archive."""
@@ -365,3 +417,126 @@ class MyrientClient:
             return ""
         path = MYRIENT_SYSTEM_PATHS[system_id]
         return f"{self.BASE_URL}/{quote(path, safe='/')}/{quote(filename, safe='')}"
+
+    def find_alternative_downloads(
+        self,
+        system_id: str,
+        original_filename: str,
+        original_url: str = ""
+    ) -> List[Dict[str, Any]]:
+        """Find alternative download sources for a ROM.
+
+        Searches alternative collections and similar filenames to find
+        the same game from different sources.
+
+        Args:
+            system_id: The system ID.
+            original_filename: The original ROM filename.
+            original_url: The original URL that failed (to avoid returning it).
+
+        Returns:
+            List of alternative game dictionaries with download_url.
+        """
+        alternatives = []
+
+        # Extract the base game title for searching
+        # Remove extension and version/region tags to get core title
+        search_title = original_filename
+        for ext in ['.zip', '.7z', '.rar', '.chd']:
+            if search_title.lower().endswith(ext):
+                search_title = search_title[:-len(ext)]
+                break
+
+        # Get first part before region/version tags
+        # e.g., "Super Mario Bros. (USA) (Rev 1)" -> "Super Mario Bros"
+        title_match = re.match(r'^([^([\]]+)', search_title)
+        if title_match:
+            search_title = title_match.group(1).strip()
+
+        print(f"[Myrient] Searching alternatives for: {search_title}")
+
+        # 1. Search in alternative collection paths
+        alt_paths = MYRIENT_ALTERNATIVE_PATHS.get(system_id, [])
+        for alt_path in alt_paths:
+            print(f"[Myrient] Checking alternative path: {alt_path}")
+            files = self.get_directory_listing(alt_path)
+
+            for f in files:
+                filename = f["name"]
+                if search_title.lower() in filename.lower():
+                    url = f"{self.BASE_URL}/{quote(alt_path, safe='/')}/{quote(f['href'], safe='')}"
+                    if url != original_url:
+                        game = self._parse_game_from_filename(filename, alt_path, system_id)
+                        game["download_url"] = url
+                        game["source"] = "alternative_collection"
+                        alternatives.append(game)
+                        print(f"[Myrient] Found alternative: {filename}")
+
+        # 2. Search in primary collection for similar files (different regions/versions)
+        primary_path = MYRIENT_SYSTEM_PATHS.get(system_id)
+        if primary_path:
+            print(f"[Myrient] Checking primary path for variants: {primary_path}")
+            files = self.get_directory_listing(primary_path)
+
+            for f in files:
+                filename = f["name"]
+                url = f"{self.BASE_URL}/{quote(primary_path, safe='/')}/{quote(f['href'], safe='')}"
+
+                # Skip the original URL
+                if url == original_url:
+                    continue
+
+                # Check if this is the same game (different region/version)
+                if search_title.lower() in filename.lower():
+                    game = self._parse_game_from_filename(filename, primary_path, system_id)
+                    game["download_url"] = url
+                    game["source"] = "variant"
+                    alternatives.append(game)
+                    print(f"[Myrient] Found variant: {filename}")
+
+        print(f"[Myrient] Found {len(alternatives)} alternative downloads")
+        return alternatives
+
+    def download_with_fallback(
+        self,
+        url: str,
+        dest_path: str,
+        system_id: str,
+        filename: str,
+        progress_callback: Optional[Callable[[int, int], None]] = None
+    ) -> tuple[bool, str]:
+        """Download a file with automatic fallback to alternatives on failure.
+
+        Args:
+            url: Primary URL to download.
+            dest_path: Destination file path.
+            system_id: System ID for finding alternatives.
+            filename: Original filename for finding alternatives.
+            progress_callback: Callback for progress updates.
+
+        Returns:
+            Tuple of (success: bool, final_url: str).
+        """
+        # Try the primary URL first
+        print(f"[Myrient] Attempting primary download: {url}")
+        if self.download_file(url, dest_path, progress_callback):
+            return True, url
+
+        print(f"[Myrient] Primary download failed, searching for alternatives...")
+
+        # Find alternatives
+        alternatives = self.find_alternative_downloads(system_id, filename, url)
+
+        # Try each alternative
+        for alt in alternatives:
+            alt_url = alt.get("download_url", "")
+            if not alt_url:
+                continue
+
+            print(f"[Myrient] Trying alternative: {alt_url}")
+            if self.download_file(alt_url, dest_path, progress_callback):
+                print(f"[Myrient] Alternative download succeeded!")
+                return True, alt_url
+
+        print(f"[Myrient] All download attempts failed")
+        return False, url

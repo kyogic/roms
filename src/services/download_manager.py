@@ -102,15 +102,17 @@ class DownloadWorker(QObject):
                 )
 
         try:
-            # Download the file
-            success = self.myrient_client.download_file(
+            # Download the file with automatic fallback to alternatives
+            success, final_url = self.myrient_client.download_with_fallback(
                 game["download_url"],
                 str(temp_path),
+                game["system_id"],
+                game["file_name"],
                 progress_callback
             )
 
             if not success:
-                raise Exception("Download failed")
+                raise Exception("Download failed - no working sources found")
 
             # Organize the file
             final_path = self.file_organizer.organize_file(
