@@ -317,3 +317,76 @@ class DatabaseManager:
         """Clear all completed downloads from the queue."""
         with self.get_connection() as conn:
             conn.execute("DELETE FROM downloads WHERE status = 'completed'")
+
+    # Pre-populated games operations
+    def load_prepopulated_games(self, games_by_system: Dict[str, List[Dict[str, Any]]]) -> int:
+        """Load pre-populated games into the database.
+
+        Args:
+            games_by_system: Dictionary mapping system_id to list of game data.
+
+        Returns:
+            Number of games added.
+        """
+        count = 0
+        with self.get_connection() as conn:
+            for system_id, games in games_by_system.items():
+                for game in games:
+                    # Check if game already exists (by title and system)
+                    cursor = conn.execute(
+                        "SELECT id FROM games WHERE title = ? AND system_id = ?",
+                        (game.get("title"), system_id)
+                    )
+                    if cursor.fetchone():
+                        continue  # Skip existing games
+
+                    # Create a unique identifier for pre-populated games
+                    title_slug = game.get("title", "").lower().replace(" ", "-")[:50]
+                    ia_identifier = f"prepopulated-{system_id}-{title_slug}"
+
+                    conn.execute(
+                        """
+                        INSERT INTO games
+                        (ia_identifier, title, system_id, genre, game_type, publisher, developer,
+                         release_year, region, description, file_size, file_name, file_hash, download_url)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            ia_identifier,
+                            game.get("title"),
+                            system_id,
+                            game.get("genre", ""),
+                            game.get("game_type", ""),
+                            game.get("publisher", ""),
+                            game.get("developer", ""),
+                            game.get("year"),
+                            "USA",  # Default region
+                            game.get("description", ""),
+                            0,  # file_size unknown
+                            "",  # file_name unknown
+                            "",  # file_hash unknown
+                            "",  # download_url - will be populated when searched
+                        )
+                    )
+                    count += 1
+
+        return count
+
+    def is_catalog_empty(self) -> bool:
+        """Check if the games catalog is empty."""
+        return self.get_game_count() == 0
+
+    def get_distinct_genres(self, system_id: Optional[str] = None) -> List[str]:
+        """Get distinct genres in the catalog."""
+        query = "SELECT DISTINCT genre FROM games WHERE genre != ''"
+        params: List[Any] = []
+
+        if system_id:
+            query += " AND system_id = ?"
+            params.append(system_id)
+
+        query += " ORDER BY genre"
+
+        with self.get_connection() as conn:
+            cursor = conn.execute(query, params)
+            return [row[0] for row in cursor.fetchall()]

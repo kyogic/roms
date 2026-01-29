@@ -11,7 +11,7 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from ..database import DatabaseManager
 from ..services import DownloadManager, InternetArchiveClient
-from ..utils import SYSTEMS, GENRES, REGIONS
+from ..utils import SYSTEMS, GENRES, REGIONS, GAMES_DATABASE
 
 
 class SearchWorker(QThread):
@@ -55,6 +55,9 @@ class BrowseView(QWidget):
         self._setup_ui()
         self._connect_signals()
 
+        # Auto-load pre-populated games if catalog is empty
+        self._ensure_catalog_populated()
+
     def _setup_ui(self) -> None:
         """Set up the browse view UI."""
         layout = QVBoxLayout(self)
@@ -91,6 +94,11 @@ class BrowseView(QWidget):
         self.search_btn = QPushButton("Search Online")
         self.search_btn.setToolTip("Search Internet Archive for ROMs")
         filter_layout.addWidget(self.search_btn)
+
+        # Load sample games button
+        self.load_samples_btn = QPushButton("Load Sample Games")
+        self.load_samples_btn.setToolTip("Load a database of popular games to browse")
+        filter_layout.addWidget(self.load_samples_btn)
 
         layout.addLayout(filter_layout)
 
@@ -159,12 +167,39 @@ class BrowseView(QWidget):
         self.genre_combo.currentIndexChanged.connect(self._filter_results)
         self.region_combo.currentIndexChanged.connect(self._filter_results)
         self.search_btn.clicked.connect(self._search_online)
+        self.load_samples_btn.clicked.connect(self._load_sample_games)
 
         self.table.itemSelectionChanged.connect(self._on_selection_changed)
         self.table.doubleClicked.connect(self._on_double_click)
 
         self.download_btn.clicked.connect(self._download_selected)
         self.download_all_btn.clicked.connect(self._download_all_regions)
+
+    def _ensure_catalog_populated(self) -> None:
+        """Ensure the catalog has games, auto-load samples if empty."""
+        if self.db.is_catalog_empty():
+            count = self.db.load_prepopulated_games(GAMES_DATABASE)
+            if count > 0:
+                print(f"[Browse] Auto-loaded {count} sample games into catalog")
+
+    def _load_sample_games(self) -> None:
+        """Load sample games into the catalog."""
+        count = self.db.load_prepopulated_games(GAMES_DATABASE)
+        if count > 0:
+            QMessageBox.information(
+                self,
+                "Games Loaded",
+                f"Loaded {count} sample games into the catalog.\n\n"
+                "These are popular titles for each system. "
+                "Use 'Search Online' to find more games from Internet Archive."
+            )
+            self._load_games_from_db()
+        else:
+            QMessageBox.information(
+                self,
+                "Already Loaded",
+                "Sample games are already in your catalog."
+            )
 
     def set_system_filter(self, system_id: Optional[str]) -> None:
         """Set the current system filter.
@@ -297,10 +332,13 @@ class BrowseView(QWidget):
 
             # Status
             game_id = game.get("id", 0)
+            download_url = game.get("download_url", "")
             if self.db.is_in_library(game_id):
                 status = "Downloaded"
-            else:
+            elif download_url:
                 status = "Available"
+            else:
+                status = "Search to DL"  # Need to search IA to get download URL
             self.table.setItem(row, 5, QTableWidgetItem(status))
 
         self.table.setSortingEnabled(True)
@@ -361,6 +399,7 @@ class BrowseView(QWidget):
 
         game = selected[0].data(Qt.ItemDataRole.UserRole)
         game_id = game.get("id")
+        download_url = game.get("download_url", "")
 
         if not game_id:
             QMessageBox.warning(
@@ -368,6 +407,20 @@ class BrowseView(QWidget):
                 "Cannot Download",
                 "This game doesn't have valid download information."
             )
+            return
+
+        # Check if we have a download URL
+        if not download_url:
+            result = QMessageBox.question(
+                self,
+                "Search Required",
+                f"'{game.get('title', 'ROM')}' needs to be searched on Internet Archive first.\n\n"
+                "Would you like to search for it now?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if result == QMessageBox.StandardButton.Yes:
+                self.search_input.setText(game.get("title", ""))
+                self._search_online()
             return
 
         if self.db.is_in_library(game_id):

@@ -10,6 +10,13 @@ from .constants import (
     REGIONS,
     RECOMMENDED_EMULATORS,
     DEFAULT_CONFIG,
+    MULTI_SYSTEM_COLLECTIONS,
+    SYSTEM_SEARCH_KEYWORDS,
+)
+from .games_database import (
+    GAMES_DATABASE,
+    get_games_for_system,
+    get_all_games,
 )
 
 __all__ = [
@@ -22,4 +29,9 @@ __all__ = [
     "REGIONS",
     "RECOMMENDED_EMULATORS",
     "DEFAULT_CONFIG",
+    "MULTI_SYSTEM_COLLECTIONS",
+    "SYSTEM_SEARCH_KEYWORDS",
+    "GAMES_DATABASE",
+    "get_games_for_system",
+    "get_all_games",
 ]

@@ -21,7 +21,7 @@ class SystemInfo:
     ia_collections: List[str]
 
 
-# All supported gaming systems
+# All supported gaming systems with VERIFIED Internet Archive collection identifiers
 SYSTEMS: Dict[str, SystemInfo] = {
     # Nintendo Systems
     "nes": SystemInfo(
@@ -30,8 +30,14 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="NES",
         manufacturer="Nintendo",
         generation="3rd",
-        file_extensions=[".nes", ".unf", ".unif"],
-        ia_collections=["nes-roms", "no-intro_nes"]
+        file_extensions=[".nes", ".unf", ".unif", ".zip"],
+        ia_collections=[
+            "nintendo-entertainment-system-all-nes-roms-goodnes",
+            "classic-nintendo-roms-archive",
+            "retro-roms-best-set",
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "snes": SystemInfo(
         id="snes",
@@ -39,8 +45,15 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="SNES",
         manufacturer="Nintendo",
         generation="4th",
-        file_extensions=[".sfc", ".smc"],
-        ia_collections=["snes-roms", "no-intro_snes"]
+        file_extensions=[".sfc", ".smc", ".zip"],
+        ia_collections=[
+            "snes-collection_202406",
+            "CylesSNESRomPack",
+            "classic-nintendo-roms-archive",
+            "retro-roms-best-set",
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "n64": SystemInfo(
         id="n64",
@@ -48,8 +61,15 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="N64",
         manufacturer="Nintendo",
         generation="5th",
-        file_extensions=[".n64", ".z64", ".v64"],
-        ia_collections=["n64-roms", "no-intro_n64"]
+        file_extensions=[".n64", ".z64", ".v64", ".zip"],
+        ia_collections=[
+            "n64-collection",
+            "N64-Roms-Col",
+            "nintendo-64-rom-collection",
+            "retro-roms-best-set",
+            "N64TOSEC",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "gcn": SystemInfo(
         id="gcn",
@@ -57,8 +77,12 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="GCN",
         manufacturer="Nintendo",
         generation="6th",
-        file_extensions=[".iso", ".gcm", ".gcz", ".rvz"],
-        ia_collections=["gamecube-usa", "gamecube-collection"]
+        file_extensions=[".iso", ".gcm", ".gcz", ".rvz", ".zip"],
+        ia_collections=[
+            "nintendo-gamecube-roms",
+            "no-intro-rom-sets-2025",
+            "ultimate-rom-collection",
+        ]
     ),
     "gb": SystemInfo(
         id="gb",
@@ -66,8 +90,14 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="GB",
         manufacturer="Nintendo",
         generation="Handheld",
-        file_extensions=[".gb"],
-        ia_collections=["no-intro_gameboy", "gameboy-roms"]
+        file_extensions=[".gb", ".zip"],
+        ia_collections=[
+            "classic-nintendo-roms-archive",
+            "retro-roms-best-set",
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+            "ultimate-rom-collection",
+        ]
     ),
     "gbc": SystemInfo(
         id="gbc",
@@ -75,8 +105,14 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="GBC",
         manufacturer="Nintendo",
         generation="Handheld",
-        file_extensions=[".gbc"],
-        ia_collections=["no-intro_gbc", "gameboy-color-roms"]
+        file_extensions=[".gbc", ".zip"],
+        ia_collections=[
+            "classic-nintendo-roms-archive",
+            "retro-roms-best-set",
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+            "ultimate-rom-collection",
+        ]
     ),
     "gba": SystemInfo(
         id="gba",
@@ -84,8 +120,14 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="GBA",
         manufacturer="Nintendo",
         generation="Handheld",
-        file_extensions=[".gba"],
-        ia_collections=["no-intro_gba", "gba-roms"]
+        file_extensions=[".gba", ".zip"],
+        ia_collections=[
+            "classic-nintendo-roms-archive",
+            "retro-roms-best-set",
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+            "ultimate-rom-collection",
+        ]
     ),
     "nds": SystemInfo(
         id="nds",
@@ -93,8 +135,12 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="NDS",
         manufacturer="Nintendo",
         generation="Handheld",
-        file_extensions=[".nds"],
-        ia_collections=["no-intro_nds", "nds-roms"]
+        file_extensions=[".nds", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+            "ultimate-rom-collection",
+        ]
     ),
 
     # PlayStation Systems
@@ -104,8 +150,13 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="PS1",
         manufacturer="Sony",
         generation="5th",
-        file_extensions=[".bin", ".cue", ".iso", ".img", ".chd"],
-        ia_collections=["redump_psx", "psx-collection", "sony_playstation"]
+        file_extensions=[".bin", ".cue", ".iso", ".img", ".chd", ".zip"],
+        ia_collections=[
+            "ps1-collection_20240529",
+            "2024-sony-playstation-usa-hearto-1g1r-collection",
+            "sp1gcbcpt2",
+            "retro-roms-best-set",
+        ]
     ),
     "ps2": SystemInfo(
         id="ps2",
@@ -113,8 +164,13 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="PS2",
         manufacturer="Sony",
         generation="6th",
-        file_extensions=[".iso", ".bin", ".chd"],
-        ia_collections=["redump_ps2", "ps2-collection"]
+        file_extensions=[".iso", ".bin", ".chd", ".zip"],
+        ia_collections=[
+            "asurah94ps2_202405",
+            "ps2usaredump1",
+            "ps2usaredump1_20200816_1458",
+            "sony_playstation2_g",
+        ]
     ),
 
     # Sega Systems
@@ -124,8 +180,12 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="SMS",
         manufacturer="Sega",
         generation="3rd",
-        file_extensions=[".sms"],
-        ia_collections=["no-intro_sms", "sega-master-system"]
+        file_extensions=[".sms", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+            "ultimate-rom-collection",
+        ]
     ),
     "genesis": SystemInfo(
         id="genesis",
@@ -133,8 +193,15 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="GEN",
         manufacturer="Sega",
         generation="4th",
-        file_extensions=[".md", ".bin", ".gen"],
-        ia_collections=["no-intro_genesis", "genesis-roms", "sega-genesis"]
+        file_extensions=[".md", ".bin", ".gen", ".smd", ".zip"],
+        ia_collections=[
+            "mdplus_collection_22_04_16",
+            "sega-genesis-romset-ultra-usa",
+            "classic-nintendo-roms-archive",
+            "retro-roms-best-set",
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "segacd": SystemInfo(
         id="segacd",
@@ -142,8 +209,11 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="SCD",
         manufacturer="Sega",
         generation="4th",
-        file_extensions=[".bin", ".cue", ".iso", ".chd"],
-        ia_collections=["sega-cd-usa", "redump_segacd"]
+        file_extensions=[".bin", ".cue", ".iso", ".chd", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "32x": SystemInfo(
         id="32x",
@@ -151,8 +221,11 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="32X",
         manufacturer="Sega",
         generation="4th",
-        file_extensions=[".32x", ".bin"],
-        ia_collections=["no-intro_32x", "sega-32x"]
+        file_extensions=[".32x", ".bin", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "saturn": SystemInfo(
         id="saturn",
@@ -160,8 +233,11 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="SAT",
         manufacturer="Sega",
         generation="5th",
-        file_extensions=[".bin", ".cue", ".iso", ".chd"],
-        ia_collections=["redump_saturn", "sega-saturn"]
+        file_extensions=[".bin", ".cue", ".iso", ".chd", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "dreamcast": SystemInfo(
         id="dreamcast",
@@ -169,8 +245,11 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="DC",
         manufacturer="Sega",
         generation="6th",
-        file_extensions=[".gdi", ".cdi", ".chd"],
-        ia_collections=["redump_dreamcast", "dreamcast-collection"]
+        file_extensions=[".gdi", ".cdi", ".chd", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "gamegear": SystemInfo(
         id="gamegear",
@@ -178,8 +257,12 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="GG",
         manufacturer="Sega",
         generation="Handheld",
-        file_extensions=[".gg"],
-        ia_collections=["no-intro_gamegear", "game-gear-roms"]
+        file_extensions=[".gg", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+            "ultimate-rom-collection",
+        ]
     ),
 
     # Atari Systems
@@ -189,8 +272,11 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="2600",
         manufacturer="Atari",
         generation="2nd",
-        file_extensions=[".a26", ".bin"],
-        ia_collections=["atari-2600-roms", "no-intro_atari2600"]
+        file_extensions=[".a26", ".bin", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "atari5200": SystemInfo(
         id="atari5200",
@@ -198,8 +284,11 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="5200",
         manufacturer="Atari",
         generation="2nd",
-        file_extensions=[".a52", ".bin"],
-        ia_collections=["atari-5200-roms"]
+        file_extensions=[".a52", ".bin", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "atari7800": SystemInfo(
         id="atari7800",
@@ -207,8 +296,11 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="7800",
         manufacturer="Atari",
         generation="3rd",
-        file_extensions=[".a78", ".bin"],
-        ia_collections=["atari-7800-roms", "no-intro_atari7800"]
+        file_extensions=[".a78", ".bin", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "jaguar": SystemInfo(
         id="jaguar",
@@ -216,8 +308,11 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="JAG",
         manufacturer="Atari",
         generation="5th",
-        file_extensions=[".j64", ".jag", ".bin"],
-        ia_collections=["atari-jaguar-roms"]
+        file_extensions=[".j64", ".jag", ".bin", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "lynx": SystemInfo(
         id="lynx",
@@ -225,8 +320,11 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="LYNX",
         manufacturer="Atari",
         generation="Handheld",
-        file_extensions=[".lnx"],
-        ia_collections=["no-intro_lynx", "atari-lynx-roms"]
+        file_extensions=[".lnx", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
 
     # Other Systems
@@ -236,8 +334,12 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="TG16",
         manufacturer="NEC",
         generation="4th",
-        file_extensions=[".pce"],
-        ia_collections=["turbografx-16-roms", "no-intro_pce"]
+        file_extensions=[".pce", ".zip"],
+        ia_collections=[
+            "retro-roms-best-set",
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "tgcd": SystemInfo(
         id="tgcd",
@@ -245,8 +347,11 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="TGCD",
         manufacturer="NEC",
         generation="4th",
-        file_extensions=[".bin", ".cue", ".iso", ".chd"],
-        ia_collections=["turbografx-cd-roms"]
+        file_extensions=[".bin", ".cue", ".iso", ".chd", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "neogeo": SystemInfo(
         id="neogeo",
@@ -254,8 +359,11 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="NEOGEO",
         manufacturer="SNK",
         generation="4th",
-        file_extensions=[".zip"],  # Neo Geo uses zip archives with multiple files
-        ia_collections=["neo-geo-roms", "neogeo-collection"]
+        file_extensions=[".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "ngp": SystemInfo(
         id="ngp",
@@ -263,8 +371,11 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="NGP",
         manufacturer="SNK",
         generation="Handheld",
-        file_extensions=[".ngp", ".ngc"],
-        ia_collections=["no-intro_ngp", "neo-geo-pocket-roms"]
+        file_extensions=[".ngp", ".ngc", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
     "3do": SystemInfo(
         id="3do",
@@ -272,9 +383,52 @@ SYSTEMS: Dict[str, SystemInfo] = {
         abbreviation="3DO",
         manufacturer="3DO Company",
         generation="5th",
-        file_extensions=[".iso", ".bin", ".cue", ".chd"],
-        ia_collections=["3do-collection", "redump_3do"]
+        file_extensions=[".iso", ".bin", ".cue", ".chd", ".zip"],
+        ia_collections=[
+            "hearto-1g1r-collection",
+            "no-intro-rom-sets-2025",
+        ]
     ),
+}
+
+# Multi-system ROM collections on Internet Archive (for broader searches)
+MULTI_SYSTEM_COLLECTIONS = [
+    "retro-roms-best-set",
+    "hearto-1g1r-collection",
+    "no-intro-rom-sets-2025",
+    "ultimate-rom-collection",
+    "classic-nintendo-roms-archive",
+]
+
+# Search keywords for each system (used when searching by title/description)
+SYSTEM_SEARCH_KEYWORDS = {
+    "nes": ["NES", "Nintendo Entertainment System", "Famicom"],
+    "snes": ["SNES", "Super Nintendo", "Super Famicom"],
+    "n64": ["N64", "Nintendo 64"],
+    "gcn": ["GameCube", "GCN", "NGC"],
+    "gb": ["Game Boy", "Gameboy", "GB"],
+    "gbc": ["Game Boy Color", "GBC"],
+    "gba": ["Game Boy Advance", "GBA"],
+    "nds": ["Nintendo DS", "NDS"],
+    "ps1": ["PlayStation", "PSX", "PS1", "PSOne"],
+    "ps2": ["PlayStation 2", "PS2"],
+    "sms": ["Master System", "SMS", "Sega Master"],
+    "genesis": ["Genesis", "Mega Drive", "Megadrive"],
+    "segacd": ["Sega CD", "Mega CD"],
+    "32x": ["32X", "Sega 32X"],
+    "saturn": ["Saturn", "Sega Saturn"],
+    "dreamcast": ["Dreamcast", "DC"],
+    "gamegear": ["Game Gear", "Gamegear"],
+    "atari2600": ["Atari 2600", "VCS"],
+    "atari5200": ["Atari 5200"],
+    "atari7800": ["Atari 7800"],
+    "jaguar": ["Jaguar", "Atari Jaguar"],
+    "lynx": ["Lynx", "Atari Lynx"],
+    "tg16": ["TurboGrafx", "PC Engine", "TG16", "PCE"],
+    "tgcd": ["TurboGrafx-CD", "PC Engine CD"],
+    "neogeo": ["Neo Geo", "NeoGeo", "Neo-Geo"],
+    "ngp": ["Neo Geo Pocket"],
+    "3do": ["3DO"],
 }
 
 # Organize systems by manufacturer for UI

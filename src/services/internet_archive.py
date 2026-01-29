@@ -6,7 +6,7 @@ import requests
 from typing import Any, Dict, List, Optional, Callable
 from urllib.parse import quote
 
-from ..utils.constants import SYSTEMS, REGIONS
+from ..utils.constants import SYSTEMS, MULTI_SYSTEM_COLLECTIONS, SYSTEM_SEARCH_KEYWORDS
 
 
 class InternetArchiveClient:
@@ -27,7 +27,7 @@ class InternetArchiveClient:
         self._last_request_time = 0
         self.session = requests.Session()
         self.session.headers.update({
-            "User-Agent": "ROMs-Downloader/1.0 (Educational purposes)"
+            "User-Agent": "ROMs-Downloader/1.0 (Educational/Preservation purposes; Python)"
         })
 
     def _throttle(self) -> None:
@@ -49,17 +49,53 @@ class InternetArchiveClient:
         """
         self._throttle()
         try:
+            print(f"[IA] Requesting: {url}")
+            if params:
+                print(f"[IA] Query: {params.get('q', 'N/A')[:100]}")
             response = self.session.get(url, params=params, timeout=30)
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
-            print(f"Request error: {e}")
+            print(f"[IA] Request error: {e}")
             return None
+
+    def search(
+        self,
+        query: str,
+        rows: int = 100,
+        page: int = 1,
+        fields: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Perform a general search on Internet Archive.
+
+        Args:
+            query: Search query string.
+            rows: Number of results per page.
+            page: Page number (1-indexed).
+            fields: List of fields to return.
+
+        Returns:
+            List of item metadata dictionaries.
+        """
+        if fields is None:
+            fields = ["identifier", "title", "description", "creator", "date", "subject", "collection"]
+
+        # Build URL manually to handle multiple fl[] parameters
+        field_params = "&".join([f"fl[]={f}" for f in fields])
+        full_url = f"{self.SEARCH_URL}?q={quote(query)}&output=json&rows={rows}&page={page}&{field_params}"
+
+        data = self._make_request(full_url)
+        if data and "response" in data:
+            docs = data["response"].get("docs", [])
+            total = data["response"].get("numFound", 0)
+            print(f"[IA] Found {total} total results, returning {len(docs)}")
+            return docs
+        return []
 
     def search_collection(
         self,
         collection: str,
-        query: str = "",
+        title_search: str = "",
         rows: int = 100,
         page: int = 1
     ) -> List[Dict[str, Any]]:
@@ -67,29 +103,19 @@ class InternetArchiveClient:
 
         Args:
             collection: The IA collection identifier.
-            query: Optional search query.
+            title_search: Optional title search term.
             rows: Number of results per page.
             page: Page number (1-indexed).
 
         Returns:
             List of item metadata dictionaries.
         """
-        search_query = f"collection:{collection}"
-        if query:
-            search_query += f" AND ({query})"
+        query = f"collection:{collection}"
+        if title_search:
+            # Search in title
+            query += f" AND title:({title_search})"
 
-        params = {
-            "q": search_query,
-            "output": "json",
-            "rows": rows,
-            "page": page,
-            "fl[]": ["identifier", "title", "description", "creator", "date", "subject"]
-        }
-
-        data = self._make_request(self.SEARCH_URL, params)
-        if data and "response" in data:
-            return data["response"].get("docs", [])
-        return []
+        return self.search(query, rows, page)
 
     def get_item_metadata(self, identifier: str) -> Optional[Dict[str, Any]]:
         """Get metadata for a specific item.
@@ -133,11 +159,15 @@ class InternetArchiveClient:
         self,
         system_id: str,
         search_term: str = "",
-        rows: int = 100,
+        rows: int = 50,
         page: int = 1,
         progress_callback: Optional[Callable[[int, int], None]] = None
     ) -> List[Dict[str, Any]]:
         """Search for ROMs for a specific gaming system.
+
+        Uses multiple search strategies:
+        1. Search in known collections for the system
+        2. Search by system keywords in title
 
         Args:
             system_id: The system identifier (e.g., 'nes', 'snes').
@@ -150,21 +180,58 @@ class InternetArchiveClient:
             List of game dictionaries.
         """
         if system_id not in SYSTEMS:
+            print(f"[IA] Unknown system: {system_id}")
             return []
 
         system = SYSTEMS[system_id]
         all_games = []
+        seen_identifiers = set()
 
+        # Calculate total steps
+        total_collections = len(system.ia_collections)
+        total_steps = total_collections + 1  # +1 for keyword search
+
+        # Strategy 1: Search in system-specific collections
         for i, collection in enumerate(system.ia_collections):
-            items = self.search_collection(collection, search_term, rows, page)
+            if progress_callback:
+                progress_callback(i + 1, total_steps)
+
+            print(f"[IA] Searching collection: {collection}")
+            items = self.search_collection(collection, search_term, rows=rows, page=page)
 
             for item in items:
-                games = self._process_item_for_system(item, system_id, system.file_extensions)
-                all_games.extend(games)
+                identifier = item.get("identifier", "")
+                if identifier and identifier not in seen_identifiers:
+                    seen_identifiers.add(identifier)
+                    games = self._process_item_for_system(item, system_id, system.file_extensions)
+                    all_games.extend(games)
 
+            # Stop early if we found enough results
+            if len(all_games) >= rows * 2:
+                break
+
+        # Strategy 2: Search by system keywords in title (if we haven't found much)
+        if len(all_games) < rows:
             if progress_callback:
-                progress_callback(i + 1, len(system.ia_collections))
+                progress_callback(total_steps, total_steps)
 
+            keywords = SYSTEM_SEARCH_KEYWORDS.get(system_id, [system.name])
+            for keyword in keywords[:1]:  # Use first keyword only
+                keyword_query = f'mediatype:software AND title:"{keyword}"'
+                if search_term:
+                    keyword_query += f' AND title:"{search_term}"'
+
+                print(f"[IA] Keyword search: {keyword}")
+                items = self.search(keyword_query, rows=rows, page=page)
+
+                for item in items:
+                    identifier = item.get("identifier", "")
+                    if identifier and identifier not in seen_identifiers:
+                        seen_identifiers.add(identifier)
+                        games = self._process_item_for_system(item, system_id, system.file_extensions)
+                        all_games.extend(games)
+
+        print(f"[IA] Total games found for {system_id}: {len(all_games)}")
         return all_games
 
     def _process_item_for_system(
@@ -189,19 +256,30 @@ class InternetArchiveClient:
 
         # Get detailed file list
         files = self.get_item_files(identifier)
-        games = []
+        if not files:
+            print(f"[IA] No files found in {identifier}, using item metadata")
+            # Create entry from item metadata alone
+            game_data = self._create_game_from_item(item, identifier, system_id)
+            return [game_data] if game_data else []
 
+        games = []
         for file_info in files:
             filename = file_info.get("name", "")
             if not filename:
                 continue
 
             # Check if file has valid extension
-            ext_match = any(filename.lower().endswith(ext) for ext in extensions)
+            ext_lower = filename.lower()
+            ext_match = any(ext_lower.endswith(ext) for ext in extensions)
             # Also check for compressed files
-            is_archive = filename.lower().endswith(('.zip', '.7z', '.rar'))
+            is_archive = ext_lower.endswith(('.zip', '.7z', '.rar'))
 
             if not ext_match and not is_archive:
+                continue
+
+            # Skip metadata/system files
+            skip_exts = ('.xml', '.txt', '.sqlite', '.torrent', '.jpg', '.png', '.gif', '.nfo')
+            if ext_lower.endswith(skip_exts):
                 continue
 
             # Parse game info from filename
@@ -227,6 +305,47 @@ class InternetArchiveClient:
 
         return games
 
+    def _create_game_from_item(
+        self,
+        item: Dict[str, Any],
+        identifier: str,
+        system_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Create a game entry from item metadata when file list unavailable.
+
+        Args:
+            item: IA item metadata.
+            identifier: IA identifier.
+            system_id: System ID.
+
+        Returns:
+            Game dictionary or None.
+        """
+        title = item.get("title", identifier)
+        if not title:
+            return None
+
+        desc = item.get("description", "")
+        if isinstance(desc, list):
+            desc = " ".join(desc)
+
+        return {
+            "ia_identifier": identifier,
+            "title": title,
+            "system_id": system_id,
+            "genre": "",
+            "game_type": "",
+            "publisher": item.get("creator", "") if isinstance(item.get("creator"), str) else "",
+            "developer": "",
+            "release_year": None,
+            "region": "Unknown",
+            "description": desc[:500] if desc else "",
+            "file_name": "",
+            "file_size": 0,
+            "file_hash": "",
+            "download_url": f"{self.DOWNLOAD_URL}/{identifier}",
+        }
+
     def _parse_game_from_filename(
         self,
         filename: str,
@@ -246,9 +365,10 @@ class InternetArchiveClient:
         # Remove extension
         name = filename
         for ext in ['.zip', '.7z', '.rar', '.nes', '.sfc', '.smc', '.n64', '.z64',
-                    '.gb', '.gbc', '.gba', '.nds', '.iso', '.bin', '.cue', '.chd',
-                    '.md', '.gen', '.sms', '.gg', '.pce', '.ngp', '.a26', '.a52',
-                    '.a78', '.j64', '.jag', '.lnx', '.gdi', '.cdi']:
+                    '.v64', '.gb', '.gbc', '.gba', '.nds', '.iso', '.bin', '.cue',
+                    '.chd', '.md', '.gen', '.smd', '.sms', '.gg', '.pce', '.ngp',
+                    '.a26', '.a52', '.a78', '.j64', '.jag', '.lnx', '.gdi', '.cdi',
+                    '.gcm', '.gcz', '.rvz', '.img']:
             if name.lower().endswith(ext):
                 name = name[:-len(ext)]
                 break
@@ -259,15 +379,19 @@ class InternetArchiveClient:
             (r'\(USA\)', 'USA'),
             (r'\(U\)', 'USA'),
             (r'\(US\)', 'USA'),
+            (r'\(America\)', 'USA'),
             (r'\(Europe\)', 'Europe'),
             (r'\(E\)', 'Europe'),
             (r'\(EU\)', 'Europe'),
+            (r'\(EUR\)', 'Europe'),
             (r'\(Japan\)', 'Japan'),
             (r'\(J\)', 'Japan'),
             (r'\(JP\)', 'Japan'),
+            (r'\(JPN\)', 'Japan'),
             (r'\(World\)', 'World'),
             (r'\(W\)', 'World'),
             (r'\(PAL\)', 'PAL'),
+            (r'\(NTSC\)', 'USA'),
         ]
 
         for pattern, reg in region_patterns:
@@ -275,13 +399,10 @@ class InternetArchiveClient:
                 region = reg
                 break
 
-        # Clean up title - remove region tags, version info, etc.
+        # Clean up title
         title = name
-        # Remove parenthetical info
         title = re.sub(r'\s*\([^)]*\)\s*', ' ', title)
-        # Remove brackets info
         title = re.sub(r'\s*\[[^\]]*\]\s*', ' ', title)
-        # Clean up whitespace
         title = ' '.join(title.split())
 
         # Try to extract year
@@ -319,6 +440,7 @@ class InternetArchiveClient:
             True if successful, False otherwise.
         """
         try:
+            print(f"[IA] Downloading: {url}")
             response = self.session.get(url, stream=True, timeout=60)
             response.raise_for_status()
 
@@ -333,7 +455,23 @@ class InternetArchiveClient:
                         if progress_callback and total_size > 0:
                             progress_callback(downloaded, total_size)
 
+            print(f"[IA] Download complete: {dest_path}")
             return True
         except (requests.RequestException, IOError) as e:
-            print(f"Download error: {e}")
+            print(f"[IA] Download error: {e}")
+            return False
+
+    def test_connection(self) -> bool:
+        """Test connection to Internet Archive.
+
+        Returns:
+            True if connection successful.
+        """
+        try:
+            response = self.session.get(
+                f"{self.BASE_URL}/metadata/principalofshadows",
+                timeout=10
+            )
+            return response.status_code == 200
+        except requests.RequestException:
             return False
