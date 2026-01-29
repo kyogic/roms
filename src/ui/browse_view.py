@@ -10,12 +10,12 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from ..database import DatabaseManager
-from ..services import DownloadManager, InternetArchiveClient
+from ..services import DownloadManager, MyrientClient
 from ..utils import SYSTEMS, GENRES, REGIONS, GAMES_DATABASE
 
 
 class SearchWorker(QThread):
-    """Worker thread for searching Internet Archive."""
+    """Worker thread for searching Myrient."""
 
     finished = pyqtSignal(list)  # List of games found
     progress = pyqtSignal(int, int)  # current, total
@@ -25,11 +25,11 @@ class SearchWorker(QThread):
         super().__init__()
         self.system_id = system_id
         self.search_term = search_term
-        self.ia_client = InternetArchiveClient()
+        self.myrient_client = MyrientClient()
 
     def run(self):
         try:
-            games = self.ia_client.search_roms_for_system(
+            games = self.myrient_client.search_roms_for_system(
                 self.system_id,
                 self.search_term,
                 rows=100,
@@ -92,7 +92,7 @@ class BrowseView(QWidget):
 
         # Search button
         self.search_btn = QPushButton("Search Online")
-        self.search_btn.setToolTip("Search Internet Archive for ROMs")
+        self.search_btn.setToolTip("Search Myrient for ROMs")
         filter_layout.addWidget(self.search_btn)
 
         # Load sample games button
@@ -254,7 +254,7 @@ class BrowseView(QWidget):
 
         # Create and show progress dialog
         self.progress_dialog = QProgressDialog(
-            f"Searching Internet Archive for {SYSTEMS[self._current_system].name} ROMs...",
+            f"Searching Myrient for {SYSTEMS[self._current_system].name} ROMs...",
             "Cancel",
             0, 100,
             self
@@ -289,7 +289,7 @@ class BrowseView(QWidget):
         QMessageBox.information(
             self,
             "Search Complete",
-            f"Found {len(games)} ROMs from Internet Archive.\n"
+            f"Found {len(games)} ROMs from Myrient.\n"
             "Results have been saved to your local catalog."
         )
 
@@ -414,7 +414,7 @@ class BrowseView(QWidget):
             result = QMessageBox.question(
                 self,
                 "Search Required",
-                f"'{game.get('title', 'ROM')}' needs to be searched on Internet Archive first.\n\n"
+                f"'{game.get('title', 'ROM')}' needs to be searched on Myrient first.\n\n"
                 "Would you like to search for it now?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )

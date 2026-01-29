@@ -8,7 +8,7 @@ from queue import Queue, Empty
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from .internet_archive import InternetArchiveClient
+from .myrient import MyrientClient
 from .file_organizer import FileOrganizer
 from ..database.db_manager import DatabaseManager
 from ..models import Download, DownloadStatus
@@ -25,12 +25,12 @@ class DownloadWorker(QObject):
 
     def __init__(
         self,
-        ia_client: InternetArchiveClient,
+        myrient_client: MyrientClient,
         file_organizer: FileOrganizer,
         db_manager: DatabaseManager
     ):
         super().__init__()
-        self.ia_client = ia_client
+        self.myrient_client = myrient_client
         self.file_organizer = file_organizer
         self.db_manager = db_manager
         self._queue: Queue = Queue()
@@ -103,7 +103,7 @@ class DownloadWorker(QObject):
 
         try:
             # Download the file
-            success = self.ia_client.download_file(
+            success = self.myrient_client.download_file(
                 game["download_url"],
                 str(temp_path),
                 progress_callback
@@ -163,7 +163,7 @@ class DownloadManager(QObject):
         self.db_manager = db_manager
         self.config_manager = config_manager
 
-        self.ia_client = InternetArchiveClient()
+        self.myrient_client = MyrientClient()
         self.file_organizer = FileOrganizer(config_manager)
 
         self._workers: List[DownloadWorker] = []
@@ -173,7 +173,7 @@ class DownloadManager(QObject):
         """Start the download manager."""
         for _ in range(self._max_concurrent):
             worker = DownloadWorker(
-                self.ia_client,
+                self.myrient_client,
                 self.file_organizer,
                 self.db_manager
             )
