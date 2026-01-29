@@ -149,8 +149,14 @@ class MyrientClient:
         self.rate_limit = rate_limit
         self._last_request_time = 0
         self.session = requests.Session()
+        # Use browser-like headers to avoid being blocked
         self.session.headers.update({
-            "User-Agent": "ROMs-Downloader/1.0 (Educational/Preservation purposes; Python)"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
         })
 
     def _throttle(self) -> None:
@@ -368,11 +374,31 @@ class MyrientClient:
         """
         try:
             print(f"[Myrient] Downloading: {url}")
-            response = self.session.get(url, stream=True, timeout=120)
+
+            # Add referer header to look more like a browser click
+            headers = {
+                "Referer": self.BASE_URL + "/",
+                "Accept": "application/octet-stream,*/*",
+            }
+
+            response = self.session.get(
+                url,
+                stream=True,
+                timeout=120,
+                headers=headers,
+                allow_redirects=True
+            )
+
+            # Log response details for debugging
+            print(f"[Myrient] Response status: {response.status_code}")
+            if response.status_code != 200:
+                print(f"[Myrient] Response headers: {dict(response.headers)}")
+
             response.raise_for_status()
 
             total_size = int(response.headers.get('content-length', 0))
             downloaded = 0
+            print(f"[Myrient] File size: {total_size} bytes")
 
             with open(dest_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
@@ -382,10 +408,16 @@ class MyrientClient:
                         if progress_callback and total_size > 0:
                             progress_callback(downloaded, total_size)
 
-            print(f"[Myrient] Download complete: {dest_path}")
+            print(f"[Myrient] Download complete: {dest_path} ({downloaded} bytes)")
             return True
-        except (requests.RequestException, IOError) as e:
-            print(f"[Myrient] Download error: {e}")
+        except requests.RequestException as e:
+            print(f"[Myrient] Download error: {type(e).__name__}: {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                print(f"[Myrient] Response status: {e.response.status_code}")
+                print(f"[Myrient] Response text: {e.response.text[:500] if e.response.text else 'empty'}")
+            return False
+        except IOError as e:
+            print(f"[Myrient] File I/O error: {e}")
             return False
 
     def test_connection(self) -> bool:
