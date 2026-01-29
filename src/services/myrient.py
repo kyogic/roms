@@ -270,7 +270,8 @@ class MyrientClient:
         games = []
         for f in page_files:
             game = self._parse_game_from_filename(f["name"], path, system_id)
-            game["download_url"] = f"{self.BASE_URL}/{quote(path, safe='/')}/{quote(f['href'], safe='')}"
+            # href is already URL-encoded from the HTML, don't double-encode it
+            game["download_url"] = f"{self.BASE_URL}/{quote(path, safe='/')}/{f['href']}"
             games.append(game)
 
         if progress_callback:
@@ -496,7 +497,8 @@ class MyrientClient:
             for f in files:
                 filename = f["name"]
                 if search_title.lower() in filename.lower():
-                    url = f"{self.BASE_URL}/{quote(alt_path, safe='/')}/{quote(f['href'], safe='')}"
+                    # href is already URL-encoded from the HTML, don't double-encode it
+                    url = f"{self.BASE_URL}/{quote(alt_path, safe='/')}/{f['href']}"
                     if url != original_url:
                         game = self._parse_game_from_filename(filename, alt_path, system_id)
                         game["download_url"] = url
@@ -512,7 +514,8 @@ class MyrientClient:
 
             for f in files:
                 filename = f["name"]
-                url = f"{self.BASE_URL}/{quote(primary_path, safe='/')}/{quote(f['href'], safe='')}"
+                # href is already URL-encoded from the HTML, don't double-encode it
+                url = f"{self.BASE_URL}/{quote(primary_path, safe='/')}/{f['href']}"
 
                 # Skip the original URL
                 if url == original_url:
