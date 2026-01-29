@@ -8,10 +8,16 @@ from PyQt6.QtWidgets import (
     QProgressDialog, QAbstractItemView, QGroupBox, QTextEdit
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QColor, QBrush
 
 from ..database import DatabaseManager
 from ..services import DownloadManager, MyrientClient
 from ..utils import SYSTEMS, GENRES, REGIONS, GAMES_DATABASE
+
+# Color coding for row status
+COLOR_DOWNLOADED = QColor(144, 238, 144)    # Light green - already downloaded
+COLOR_AVAILABLE = QColor(255, 255, 255)      # White - ready to download
+COLOR_NEEDS_SEARCH = QColor(255, 255, 150)   # Yellow - needs online search first
 
 
 class SearchWorker(QThread):
@@ -296,53 +302,110 @@ class BrowseView(QWidget):
     def _on_search_error(self, error: str) -> None:
         """Handle search error."""
         self.progress_dialog.close()
+
+        # Provide more helpful error messages
+        if "proxy" in error.lower() or "tunnel" in error.lower():
+            error_msg = (
+                f"Network Error: Unable to connect to Myrient.\n\n"
+                f"This may be caused by:\n"
+                f"- Proxy or firewall blocking the connection\n"
+                f"- Network configuration issues\n"
+                f"- Myrient server temporarily unavailable\n\n"
+                f"Technical details: {error}"
+            )
+        elif "timeout" in error.lower():
+            error_msg = (
+                f"Connection timed out while connecting to Myrient.\n\n"
+                f"Please check your internet connection and try again."
+            )
+        elif "404" in error or "not found" in error.lower():
+            error_msg = (
+                f"The ROM collection was not found on Myrient.\n\n"
+                f"The collection path may have changed. Please report this issue."
+            )
+        else:
+            error_msg = f"An error occurred while searching:\n\n{error}"
+
         QMessageBox.critical(
             self,
             "Search Error",
-            f"An error occurred while searching:\n{error}"
+            error_msg
         )
 
     def _populate_table(self, games: List[Dict[str, Any]]) -> None:
-        """Populate the table with games."""
+        """Populate the table with games.
+
+        Color coding:
+        - Green: Already downloaded (in library)
+        - White: Available for download (has URL from Myrient search)
+        - Yellow: Needs online search first (no download URL yet)
+        """
         self.table.setSortingEnabled(False)
         self.table.setRowCount(len(games))
 
         for row, game in enumerate(games):
+            # Determine status and color first
+            game_id = game.get("id", 0)
+            download_url = game.get("download_url", "")
+
+            if self.db.is_in_library(game_id):
+                status = "Downloaded"
+                row_color = COLOR_DOWNLOADED
+            elif download_url:
+                status = "Ready"
+                row_color = COLOR_AVAILABLE
+            else:
+                status = "Search First"
+                row_color = COLOR_NEEDS_SEARCH
+
+            row_brush = QBrush(row_color)
+
             # Title
             title_item = QTableWidgetItem(game.get("title", ""))
             title_item.setData(Qt.ItemDataRole.UserRole, game)
+            title_item.setBackground(row_brush)
             self.table.setItem(row, 0, title_item)
 
             # System
             system_id = game.get("system_id", "")
             system = SYSTEMS.get(system_id)
             system_abbr = system.abbreviation if system else system_id.upper()
-            self.table.setItem(row, 1, QTableWidgetItem(system_abbr))
+            system_item = QTableWidgetItem(system_abbr)
+            system_item.setBackground(row_brush)
+            self.table.setItem(row, 1, system_item)
 
             # Genre
-            self.table.setItem(row, 2, QTableWidgetItem(game.get("genre", "")))
+            genre_item = QTableWidgetItem(game.get("genre", ""))
+            genre_item.setBackground(row_brush)
+            self.table.setItem(row, 2, genre_item)
 
             # Region
-            self.table.setItem(row, 3, QTableWidgetItem(game.get("region", "")))
+            region_item = QTableWidgetItem(game.get("region", ""))
+            region_item.setBackground(row_brush)
+            self.table.setItem(row, 3, region_item)
 
             # Size
             size = game.get("file_size", 0)
             size_str = self._format_size(size)
-            self.table.setItem(row, 4, QTableWidgetItem(size_str))
+            size_item = QTableWidgetItem(size_str)
+            size_item.setBackground(row_brush)
+            self.table.setItem(row, 4, size_item)
 
             # Status
-            game_id = game.get("id", 0)
-            download_url = game.get("download_url", "")
-            if self.db.is_in_library(game_id):
-                status = "Downloaded"
-            elif download_url:
-                status = "Available"
-            else:
-                status = "Search to DL"  # Need to search IA to get download URL
-            self.table.setItem(row, 5, QTableWidgetItem(status))
+            status_item = QTableWidgetItem(status)
+            status_item.setBackground(row_brush)
+            self.table.setItem(row, 5, status_item)
 
         self.table.setSortingEnabled(True)
-        self.result_label.setText(f"Showing {len(games)} ROMs")
+
+        # Count by status for label
+        ready_count = sum(1 for g in games if g.get("download_url") and not self.db.is_in_library(g.get("id", 0)))
+        search_count = sum(1 for g in games if not g.get("download_url"))
+        downloaded_count = sum(1 for g in games if self.db.is_in_library(g.get("id", 0)))
+
+        self.result_label.setText(
+            f"{len(games)} ROMs | Ready: {ready_count} | Need Search: {search_count} | Downloaded: {downloaded_count}"
+        )
 
     def _format_size(self, size: int) -> str:
         """Format file size to human readable."""
