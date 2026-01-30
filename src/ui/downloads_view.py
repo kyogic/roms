@@ -13,35 +13,89 @@ from ..models import Download, DownloadStatus
 from ..utils import SYSTEMS
 
 
+def format_size(size_bytes: int) -> str:
+    """Format bytes to human readable size."""
+    if size_bytes == 0:
+        return "0 B"
+    for unit in ["B", "KB", "MB", "GB"]:
+        if size_bytes < 1024:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024
+    return f"{size_bytes:.1f} TB"
+
+
+def format_speed(speed_bytes: float) -> str:
+    """Format bytes/sec to human readable speed."""
+    if speed_bytes == 0:
+        return "0 B/s"
+    for unit in ["B/s", "KB/s", "MB/s", "GB/s"]:
+        if speed_bytes < 1024:
+            return f"{speed_bytes:.1f} {unit}"
+        speed_bytes /= 1024
+    return f"{speed_bytes:.1f} TB/s"
+
+
+def format_eta(seconds: int) -> str:
+    """Format seconds to human readable time."""
+    if seconds <= 0:
+        return "--:--"
+    if seconds > 86400:  # More than a day
+        return ">1 day"
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+    if hours > 0:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
+
+
 class DownloadProgressWidget(QWidget):
-    """Widget displaying download progress."""
+    """Widget displaying download progress with speed and ETA."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        layout = QHBoxLayout(self)
+        layout = QVBoxLayout(self)
         layout.setContentsMargins(2, 2, 2, 2)
+        layout.setSpacing(1)
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(True)
+        self.progress_bar.setMaximumHeight(16)
         layout.addWidget(self.progress_bar)
 
-    def set_progress(self, value: float) -> None:
-        """Set the progress value (0-100)."""
+        self.info_label = QLabel("")
+        self.info_label.setStyleSheet("font-size: 10px; color: #666;")
+        layout.addWidget(self.info_label)
+
+    def set_progress(self, value: float, downloaded: int = 0, total: int = 0,
+                     speed: float = 0, eta: int = 0) -> None:
+        """Set the progress value with speed and ETA."""
         self.progress_bar.setValue(int(value))
+
+        if total > 0 and speed > 0:
+            info_text = f"{format_size(downloaded)}/{format_size(total)} | {format_speed(speed)} | ETA: {format_eta(eta)}"
+            self.info_label.setText(info_text)
+        elif total > 0:
+            self.info_label.setText(f"{format_size(downloaded)}/{format_size(total)}")
+        else:
+            self.info_label.setText("")
 
     def set_status(self, status: DownloadStatus) -> None:
         """Set the display based on status."""
         if status == DownloadStatus.COMPLETED:
             self.progress_bar.setValue(100)
             self.progress_bar.setFormat("Completed")
+            self.info_label.setText("")
         elif status == DownloadStatus.FAILED:
             self.progress_bar.setValue(0)
             self.progress_bar.setFormat("Failed")
+            self.info_label.setText("")
         elif status == DownloadStatus.PENDING:
             self.progress_bar.setValue(0)
             self.progress_bar.setFormat("Queued")
+            self.info_label.setText("")
         elif status == DownloadStatus.PAUSED:
             self.progress_bar.setFormat("Paused")
         else:
@@ -102,7 +156,7 @@ class DownloadsView(QWidget):
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
         self.table.setColumnWidth(1, 60)
         self.table.setColumnWidth(2, 100)
-        self.table.setColumnWidth(3, 150)
+        self.table.setColumnWidth(3, 250)  # Wider for speed/ETA info
         self.table.setColumnWidth(4, 80)
 
         layout.addWidget(self.table)
@@ -173,15 +227,20 @@ class DownloadsView(QWidget):
                 f"{active_count} active, {completed} completed, {total} total"
             )
 
-    def _on_download_started(self, download_id: int) -> None:
+    def _on_download_started(self, download_id: int, total_size: int) -> None:
         """Handle download started."""
         if download_id in self._progress_widgets:
             self._progress_widgets[download_id].set_progress(0)
 
-    def _on_download_progress(self, download_id: int, progress: float) -> None:
+    def _on_download_progress(
+        self, download_id: int, progress: float,
+        downloaded: int, total: int, speed: float, eta: int
+    ) -> None:
         """Handle download progress update."""
         if download_id in self._progress_widgets:
-            self._progress_widgets[download_id].set_progress(progress)
+            self._progress_widgets[download_id].set_progress(
+                progress, downloaded, total, speed, eta
+            )
 
     def _on_download_completed(self, download_id: int, file_path: str) -> None:
         """Handle download completed."""

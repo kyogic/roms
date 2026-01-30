@@ -84,6 +84,18 @@ SYSTEMS: Dict[str, SystemInfo] = {
             "ultimate-rom-collection",
         ]
     ),
+    "wii": SystemInfo(
+        id="wii",
+        name="Nintendo Wii",
+        abbreviation="Wii",
+        manufacturer="Nintendo",
+        generation="7th",
+        file_extensions=[".iso", ".wbfs", ".rvz", ".wia", ".zip"],
+        ia_collections=[
+            "no-intro-rom-sets-2025",
+            "ultimate-rom-collection",
+        ]
+    ),
     "gb": SystemInfo(
         id="gb",
         name="Game Boy",
@@ -406,6 +418,7 @@ SYSTEM_SEARCH_KEYWORDS = {
     "snes": ["SNES", "Super Nintendo", "Super Famicom"],
     "n64": ["N64", "Nintendo 64"],
     "gcn": ["GameCube", "GCN", "NGC"],
+    "wii": ["Wii", "Nintendo Wii"],
     "gb": ["Game Boy", "Gameboy", "GB"],
     "gbc": ["Game Boy Color", "GBC"],
     "gba": ["Game Boy Advance", "GBA"],
@@ -433,7 +446,7 @@ SYSTEM_SEARCH_KEYWORDS = {
 
 # Organize systems by manufacturer for UI
 SYSTEMS_BY_MANUFACTURER = {
-    "Nintendo": ["nes", "snes", "n64", "gcn", "gb", "gbc", "gba", "nds"],
+    "Nintendo": ["nes", "snes", "n64", "gcn", "wii", "gb", "gbc", "gba", "nds"],
     "Sony": ["ps1", "ps2"],
     "Sega": ["sms", "genesis", "segacd", "32x", "saturn", "dreamcast", "gamegear"],
     "Atari": ["atari2600", "atari5200", "atari7800", "jaguar", "lynx"],
@@ -478,6 +491,7 @@ RECOMMENDED_EMULATORS = {
     "snes": ["bsnes", "Snes9x", "ZSNES"],
     "n64": ["Project64", "Mupen64Plus", "simple64"],
     "gcn": ["Dolphin"],
+    "wii": ["Dolphin"],
     "gb": ["SameBoy", "BGB", "mGBA"],
     "gbc": ["SameBoy", "BGB", "mGBA"],
     "gba": ["mGBA", "VBA-M"],

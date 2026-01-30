@@ -49,6 +49,7 @@ MYRIENT_SYSTEM_PATHS = {
     "snes": "No-Intro/Nintendo - Super Nintendo Entertainment System",
     "n64": "No-Intro/Nintendo - Nintendo 64 (BigEndian)",
     "gcn": "Redump/Nintendo - GameCube - NKit RVZ [zstd-19-128k]",
+    "wii": "No-Intro/Non-Redump - Nintendo - Wii",
     "gb": "No-Intro/Nintendo - Game Boy",
     "gbc": "No-Intro/Nintendo - Game Boy Color",
     "gba": "No-Intro/Nintendo - Game Boy Advance",
@@ -100,6 +101,10 @@ MYRIENT_ALTERNATIVE_PATHS = {
     ],
     "gcn": [
         "Redump/Nintendo - GameCube",
+    ],
+    "wii": [
+        "Redump/Nintendo - Wii",
+        "Redump/Nintendo - Wii - NKit RVZ [zstd-19-128k]",
     ],
     "nds": [
         "No-Intro/Nintendo - Nintendo DS",

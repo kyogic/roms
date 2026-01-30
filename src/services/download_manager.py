@@ -2,6 +2,7 @@
 
 import os
 import threading
+import time
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 from queue import Queue, Empty
@@ -18,10 +19,11 @@ from ..utils.config import ConfigManager
 class DownloadWorker(QObject):
     """Worker for downloading files in a separate thread."""
 
-    progress = pyqtSignal(int, float)  # download_id, progress percentage
+    # download_id, progress %, downloaded bytes, total bytes, speed (bytes/sec), eta (seconds)
+    progress = pyqtSignal(int, float, int, int, float, int)
     completed = pyqtSignal(int, str)  # download_id, file_path
     failed = pyqtSignal(int, str)  # download_id, error message
-    started = pyqtSignal(int)  # download_id
+    started = pyqtSignal(int, int)  # download_id, total_size
 
     def __init__(
         self,
@@ -75,7 +77,6 @@ class DownloadWorker(QObject):
 
     def _process_download(self, download: Download) -> None:
         """Process a single download."""
-        self.started.emit(download.id)
         self.db_manager.update_download_status(download.id, "downloading", 0)
 
         # Get the game info
@@ -91,15 +92,51 @@ class DownloadWorker(QObject):
         temp_dir = self.file_organizer.get_temp_dir()
         temp_path = temp_dir / game["file_name"]
 
+        # Track download speed
+        start_time = time.time()
+        last_update_time = start_time
+        last_downloaded = 0
+        speed_samples = []  # Rolling average for smoother speed display
+        total_size = 0
+
         def progress_callback(downloaded: int, total: int) -> None:
+            nonlocal last_update_time, last_downloaded, speed_samples, total_size
+
             if self._cancel_current:
                 raise InterruptedError("Download cancelled")
-            if total > 0:
-                progress = (downloaded / total) * 100
-                self.progress.emit(download.id, progress)
-                self.db_manager.update_download_status(
-                    download.id, "downloading", progress
-                )
+
+            total_size = total
+            current_time = time.time()
+            time_diff = current_time - last_update_time
+
+            # Update speed every 0.5 seconds to avoid too frequent updates
+            if time_diff >= 0.5:
+                bytes_diff = downloaded - last_downloaded
+                current_speed = bytes_diff / time_diff if time_diff > 0 else 0
+
+                # Keep rolling average of last 5 samples for smoother display
+                speed_samples.append(current_speed)
+                if len(speed_samples) > 5:
+                    speed_samples.pop(0)
+
+                avg_speed = sum(speed_samples) / len(speed_samples) if speed_samples else 0
+
+                # Calculate ETA
+                remaining_bytes = total - downloaded
+                eta_seconds = int(remaining_bytes / avg_speed) if avg_speed > 0 else 0
+
+                if total > 0:
+                    progress = (downloaded / total) * 100
+                    self.progress.emit(download.id, progress, downloaded, total, avg_speed, eta_seconds)
+                    self.db_manager.update_download_status(
+                        download.id, "downloading", progress
+                    )
+
+                last_update_time = current_time
+                last_downloaded = downloaded
+
+        # Emit started signal with total size (will be 0 initially, updated in first progress)
+        self.started.emit(download.id, 0)
 
         try:
             # Download the file with automatic fallback to alternatives
@@ -150,8 +187,9 @@ class DownloadWorker(QObject):
 class DownloadManager(QObject):
     """Manages the download queue and workers."""
 
-    download_started = pyqtSignal(int)  # download_id
-    download_progress = pyqtSignal(int, float)  # download_id, progress
+    download_started = pyqtSignal(int, int)  # download_id, total_size
+    # download_id, progress %, downloaded, total, speed (bytes/sec), eta (seconds)
+    download_progress = pyqtSignal(int, float, int, int, float, int)
     download_completed = pyqtSignal(int, str)  # download_id, file_path
     download_failed = pyqtSignal(int, str)  # download_id, error message
     queue_updated = pyqtSignal()
@@ -242,14 +280,17 @@ class DownloadManager(QObject):
             worker_idx = download.id % len(self._workers)
             self._workers[worker_idx].add_download(download)
 
-    def _on_download_started(self, download_id: int) -> None:
+    def _on_download_started(self, download_id: int, total_size: int) -> None:
         """Handle download started signal."""
-        self.download_started.emit(download_id)
+        self.download_started.emit(download_id, total_size)
         self.queue_updated.emit()
 
-    def _on_download_progress(self, download_id: int, progress: float) -> None:
+    def _on_download_progress(
+        self, download_id: int, progress: float,
+        downloaded: int, total: int, speed: float, eta: int
+    ) -> None:
         """Handle download progress signal."""
-        self.download_progress.emit(download_id, progress)
+        self.download_progress.emit(download_id, progress, downloaded, total, speed, eta)
 
     def _on_download_completed(self, download_id: int, file_path: str) -> None:
         """Handle download completed signal."""
